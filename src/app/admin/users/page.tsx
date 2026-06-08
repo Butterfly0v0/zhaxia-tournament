@@ -1,12 +1,18 @@
 import { prisma } from "@/lib/db";
 import { createAdminUserAction, toggleBanUserAction } from "@/lib/actions/admin";
+import { ActionErrorBanner } from "@/components/admin/action-error-banner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 
-export default async function AdminUsersPage() {
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
   const [users, pointTotals] = await Promise.all([
     prisma.user.findMany({
       orderBy: { createdAt: "desc" },
@@ -43,6 +49,7 @@ export default async function AdminUsersPage() {
           虚拟账号总积分：<span className="font-medium text-primary">{virtualTotalPoints}</span>
         </p>
       </div>
+      <ActionErrorBanner message={error} />
 
       <Card>
         <CardHeader>

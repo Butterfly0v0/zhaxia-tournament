@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireAdmin, hashPassword } from "@/lib/auth";
+import { ensureAdminAction } from "@/lib/admin-action";
 import { gameSchema, tierSchema, tournamentSchema } from "@/lib/validators";
 import { resolveStartGgEventId } from "@/lib/startgg";
 import { syncTournamentFromStartGg } from "@/lib/startgg-sync";
@@ -10,8 +12,13 @@ import { applyTournamentPlacements } from "@/lib/placements";
 import { cleanupVirtualUserIfOrphaned } from "@/lib/virtual-user";
 import { assertNicknameAvailable } from "@/lib/nickname";
 
+function redirectAdminError(path: string, message: string): never {
+  redirect(`${path}?error=${encodeURIComponent(message)}`);
+}
+
 export async function createGameAction(formData: FormData) {
-  await requireAdmin();
+  const authError = await ensureAdminAction();
+  if (authError) redirectAdminError("/admin/games", authError.error);
 
   const raw = {
     name: formData.get("name") as string,
@@ -21,14 +28,21 @@ export async function createGameAction(formData: FormData) {
   };
 
   const parsed = gameSchema.safeParse(raw);
-  if (!parsed.success) throw new Error(parsed.error.errors[0].message);
+  if (!parsed.success) redirectAdminError("/admin/games", parsed.error.errors[0].message);
 
-  await prisma.game.create({ data: parsed.data });
+  try {
+    await prisma.game.create({ data: parsed.data });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "添加失败";
+    redirectAdminError("/admin/games", message);
+  }
   revalidatePath("/admin/games");
+  redirect("/admin/games");
 }
 
 export async function updateGameAction(id: string, formData: FormData) {
-  await requireAdmin();
+  const authError = await ensureAdminAction();
+  if (authError) redirectAdminError("/admin/games", authError.error);
 
   const raw = {
     name: formData.get("name") as string,
@@ -38,14 +52,21 @@ export async function updateGameAction(id: string, formData: FormData) {
   };
 
   const parsed = gameSchema.safeParse(raw);
-  if (!parsed.success) throw new Error(parsed.error.errors[0].message);
+  if (!parsed.success) redirectAdminError("/admin/games", parsed.error.errors[0].message);
 
-  await prisma.game.update({ where: { id }, data: parsed.data });
+  try {
+    await prisma.game.update({ where: { id }, data: parsed.data });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "保存失败";
+    redirectAdminError("/admin/games", message);
+  }
   revalidatePath("/admin/games");
+  redirect("/admin/games");
 }
 
 export async function createTierAction(formData: FormData) {
-  await requireAdmin();
+  const authError = await ensureAdminAction();
+  if (authError) redirectAdminError("/admin/tiers", authError.error);
 
   const raw = {
     name: formData.get("name") as string,
@@ -55,10 +76,16 @@ export async function createTierAction(formData: FormData) {
   };
 
   const parsed = tierSchema.safeParse(raw);
-  if (!parsed.success) throw new Error(parsed.error.errors[0].message);
+  if (!parsed.success) redirectAdminError("/admin/tiers", parsed.error.errors[0].message);
 
-  await prisma.eventTier.create({ data: parsed.data });
+  try {
+    await prisma.eventTier.create({ data: parsed.data });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "添加失败";
+    redirectAdminError("/admin/tiers", message);
+  }
   revalidatePath("/admin/tiers");
+  redirect("/admin/tiers");
 }
 
 export async function updatePointRulesAction(tierId: string, formData: FormData) {
@@ -81,7 +108,8 @@ export async function updatePointRulesAction(tierId: string, formData: FormData)
 }
 
 export async function createTournamentAction(formData: FormData) {
-  await requireAdmin();
+  const authError = await ensureAdminAction();
+  if (authError) return authError;
 
   const raw = {
     title: formData.get("title") as string,
@@ -142,7 +170,8 @@ export async function createTournamentAction(formData: FormData) {
 }
 
 export async function updateTournamentAction(id: string, formData: FormData) {
-  await requireAdmin();
+  const authError = await ensureAdminAction();
+  if (authError) return authError;
 
   const existing = await prisma.tournament.findUnique({ where: { id } });
   if (!existing) return { error: "赛事不存在" };
@@ -361,7 +390,8 @@ export async function transferPlacementAction(placementId: string, targetUserId:
 }
 
 export async function createAdminUserAction(formData: FormData) {
-  await requireAdmin();
+  const authError = await ensureAdminAction();
+  if (authError) redirectAdminError("/admin/users", authError.error);
 
   const username = formData.get("username") as string;
   const nickname = formData.get("nickname") as string;
@@ -369,24 +399,29 @@ export async function createAdminUserAction(formData: FormData) {
   const role = formData.get("role") as "PLAYER" | "ADMIN";
 
   if (!username || !nickname || !password) {
-    throw new Error("请填写完整信息");
+    redirectAdminError("/admin/users", "请填写完整信息");
   }
 
   const existing = await prisma.user.findUnique({ where: { username } });
-  if (existing) throw new Error("用户名已存在");
+  if (existing) redirectAdminError("/admin/users", "用户名已存在");
 
-  await assertNicknameAvailable(nickname);
-
-  await prisma.user.create({
-    data: {
-      username,
-      nickname,
-      passwordHash: await hashPassword(password),
-      role: role || "PLAYER",
-    },
-  });
+  try {
+    await assertNicknameAvailable(nickname);
+    await prisma.user.create({
+      data: {
+        username,
+        nickname,
+        passwordHash: await hashPassword(password),
+        role: role || "PLAYER",
+      },
+    });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "创建用户失败";
+    redirectAdminError("/admin/users", message);
+  }
 
   revalidatePath("/admin/users");
+  redirect("/admin/users");
 }
 
 export async function toggleBanUserAction(userId: string, isBanned: boolean) {

@@ -9,6 +9,11 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
+if ! grep -q '^SERVER_ACTION_ALLOWED_ORIGINS=.' .env; then
+  echo "警告：未设置 SERVER_ACTION_ALLOWED_ORIGINS，管理后台表单提交可能失败。"
+  echo "请在 .env 添加：SERVER_ACTION_ALLOWED_ORIGINS=\"你的公网IP或域名\""
+fi
+
 echo ">>> 拉取最新代码..."
 # 部分服务器访问 GitHub 时 HTTP/2 不稳定，改用 HTTP/1.1 避免 curl 16 报错
 git -c http.version=HTTP/1.1 pull

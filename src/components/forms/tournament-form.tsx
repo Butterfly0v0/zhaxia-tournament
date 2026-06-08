@@ -158,7 +158,7 @@ export function TournamentForm({
       ? await updateTournamentAction(tournament.id, formData)
       : await createTournamentAction(formData);
 
-    if (result?.error) {
+    if (result && "error" in result && result.error) {
       setError(result.error);
       setLoading(false);
       return;

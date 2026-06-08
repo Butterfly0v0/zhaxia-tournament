@@ -1,17 +1,24 @@
 import { prisma } from "@/lib/db";
 import { createGameAction, updateGameAction } from "@/lib/actions/admin";
+import { ActionErrorBanner } from "@/components/admin/action-error-banner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export default async function AdminGamesPage() {
+export default async function AdminGamesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
   const games = await prisma.game.findMany({ orderBy: { name: "asc" } });
 
   return (
     <div className="space-y-8">
       <h2 className="text-xl font-semibold">游戏管理</h2>
+      <ActionErrorBanner message={error} />
 
       <Card>
         <CardHeader>

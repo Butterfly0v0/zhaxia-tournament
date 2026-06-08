@@ -126,6 +126,8 @@ SESSION_SECRET="你的强随机字符串至少32位"
 ENCRYPTION_KEY="另一个强随机字符串至少32位"
 STARTGG_API_TOKEN="你的start.gg Token"
 NODE_ENV="production"
+# 必填：用浏览器访问网站时地址栏里的主机名（IP 或域名），多个用英文逗号分隔，不要写 http://
+SERVER_ACTION_ALLOWED_ORIGINS="你的公网IP"
 ```
 
 5. 构建并启动：
@@ -206,6 +208,37 @@ git -c http.version=HTTP/1.1 pull
 ```
 
 或直接运行 `bash scripts/update-server.sh`（脚本已内置该修复）。
+
+**若管理后台点「添加」「保存」等按钮报错（或提示 Invalid Server Actions request）**
+
+网站通过 Nginx 反向代理访问时，Next.js 的 Server Actions 会校验请求来源。请在服务器 `.env` 中设置：
+
+```env
+SERVER_ACTION_ALLOWED_ORIGINS="你的公网IP"
+```
+
+若同时用域名访问，写成：
+
+```env
+SERVER_ACTION_ALLOWED_ORIGINS="123.45.67.89,ebifightclub.cn,www.ebifightclub.cn"
+```
+
+修改后**必须重新构建**才会生效：
+
+```bash
+npm run build
+pm2 restart zhaxia
+```
+
+同时确认 Nginx 配置包含正确的代理头（可参考仓库内 `deploy/nginx.example.conf`）。
+
+**若数据库写入失败**（日志含 `readonly database` 或 `SQLITE_CANTOPEN`）：
+
+```bash
+# 确保数据库文件与 prisma 目录可写
+sudo chown -R $USER:$USER prisma
+chmod 664 prisma/prod.db
+```
 
 **若仍跳回登录页，请检查**
 

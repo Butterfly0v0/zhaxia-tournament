@@ -1,11 +1,17 @@
 import { prisma } from "@/lib/db";
 import { createTierAction, updatePointRulesAction } from "@/lib/actions/admin";
+import { ActionErrorBanner } from "@/components/admin/action-error-banner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export default async function AdminTiersPage() {
+export default async function AdminTiersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
   const tiers = await prisma.eventTier.findMany({
     include: { pointRules: { orderBy: { placement: "asc" } } },
     orderBy: { sortOrder: "asc" },
@@ -14,6 +20,7 @@ export default async function AdminTiersPage() {
   return (
     <div className="space-y-8">
       <h2 className="text-xl font-semibold">等级与积分表</h2>
+      <ActionErrorBanner message={error} />
 
       <Card>
         <CardHeader>
