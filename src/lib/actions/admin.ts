@@ -249,7 +249,8 @@ export async function updateTournamentAction(id: string, formData: FormData) {
 }
 
 export async function deleteTournamentAction(tournamentId: string) {
-  await requireAdmin();
+  const authError = await ensureAdminAction();
+  if (authError) return authError;
 
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
@@ -257,12 +258,49 @@ export async function deleteTournamentAction(tournamentId: string) {
   });
   if (!tournament) return { error: "赛事不存在" };
 
-  await prisma.tournament.delete({ where: { id: tournamentId } });
+  try {
+    await prisma.tournament.delete({ where: { id: tournamentId } });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "删除失败";
+    return { error: message };
+  }
 
   revalidatePath("/admin/tournaments");
   revalidatePath("/rankings");
   revalidatePath("/");
   return { success: true, hadPlacements: tournament._count.placements > 0 };
+}
+
+export async function deleteGameAction(formData: FormData) {
+  const authError = await ensureAdminAction();
+  if (authError) return authError;
+
+  const gameId = formData.get("gameId") as string;
+  if (!gameId) return { error: "无效的游戏 ID" };
+
+  const game = await prisma.game.findUnique({
+    where: { id: gameId },
+    include: { _count: { select: { tournaments: true } } },
+  });
+  if (!game) return { error: "游戏不存在" };
+
+  if (game._count.tournaments > 0) {
+    return {
+      error: `该游戏下还有 ${game._count.tournaments} 场赛事，请先删除相关赛事`,
+    };
+  }
+
+  try {
+    await prisma.game.delete({ where: { id: gameId } });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "删除失败";
+    return { error: message };
+  }
+
+  revalidatePath("/admin/games");
+  revalidatePath("/rankings");
+  revalidatePath("/");
+  return { success: true };
 }
 
 export async function syncTournamentFromStartGgAction(tournamentId: string) {

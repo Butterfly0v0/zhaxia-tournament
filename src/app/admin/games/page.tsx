@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { createGameAction, updateGameAction } from "@/lib/actions/admin";
 import { ActionErrorBanner } from "@/components/admin/action-error-banner";
+import { DeleteGameButton } from "@/components/admin/delete-game-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,10 @@ export default async function AdminGamesPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
-  const games = await prisma.game.findMany({ orderBy: { name: "asc" } });
+  const games = await prisma.game.findMany({
+    include: { _count: { select: { tournaments: true } } },
+    orderBy: { name: "asc" },
+  });
 
   return (
     <div className="space-y-8">
@@ -69,7 +73,14 @@ export default async function AdminGamesPage({
                   <input type="checkbox" name="isActive" defaultChecked={game.isActive} id={`active-${game.id}`} />
                   <Label htmlFor={`active-${game.id}`}>启用</Label>
                 </div>
-                <Button type="submit" size="sm">保存</Button>
+                <div className="flex flex-wrap items-center gap-3 md:col-span-2">
+                  <Button type="submit" size="sm">保存</Button>
+                  <DeleteGameButton
+                    gameId={game.id}
+                    gameName={game.name}
+                    tournamentCount={game._count.tournaments}
+                  />
+                </div>
               </form>
             </CardContent>
           </Card>

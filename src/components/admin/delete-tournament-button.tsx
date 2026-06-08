@@ -2,39 +2,35 @@
 
 import { useRouter } from "next/navigation";
 import { deleteTournamentAction } from "@/lib/actions/admin";
-import { Button } from "@/components/ui/button";
+import { ConfirmDestructiveAction } from "@/components/admin/confirm-destructive-action";
 
 export function DeleteTournamentButton({
   tournamentId,
   tournamentTitle,
   hasPlacements,
+  redirectTo = "/admin/tournaments",
 }: {
   tournamentId: string;
   tournamentTitle: string;
   hasPlacements?: boolean;
+  redirectTo?: string;
 }) {
   const router = useRouter();
 
-  async function handleDelete() {
-    const warning = hasPlacements
-      ? `确定要删除赛事「${tournamentTitle}」吗？\n\n该赛事已有比赛结果和积分记录，删除后相关积分将从排行榜中移除，此操作不可恢复。`
-      : `确定要删除赛事「${tournamentTitle}」吗？\n\n此操作不可恢复。`;
-
-    if (!confirm(warning)) return;
-
-    const result = await deleteTournamentAction(tournamentId);
-    if (result?.error) {
-      alert(result.error);
-      return;
-    }
-
-    router.push("/admin/tournaments");
-    router.refresh();
-  }
+  const description = hasPlacements
+    ? "该赛事已有比赛结果和积分记录，删除后相关积分将从排行榜中移除，此操作不可恢复。"
+    : "删除后报名记录与赛事信息将一并移除，此操作不可恢复。";
 
   return (
-    <Button type="button" variant="destructive" size="sm" onClick={handleDelete}>
-      删除赛事
-    </Button>
+    <ConfirmDestructiveAction
+      triggerLabel="删除赛事"
+      title={`确定删除「${tournamentTitle}」？`}
+      description={description}
+      onConfirm={() => deleteTournamentAction(tournamentId)}
+      onSuccess={() => {
+        router.push(redirectTo);
+        router.refresh();
+      }}
+    />
   );
 }
