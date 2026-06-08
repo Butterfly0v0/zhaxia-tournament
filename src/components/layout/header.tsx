@@ -25,6 +25,9 @@ export async function Header() {
           <Link href="/rankings" className="hover:text-primary transition-colors">
             排行榜
           </Link>
+          <Link href="/lookup" className="hover:text-primary transition-colors">
+            查询成绩
+          </Link>
           {user?.role === "PLAYER" && (
             <>
               <Link href="/player/tournaments" className="hover:text-primary transition-colors">

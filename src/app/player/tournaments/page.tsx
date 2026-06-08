@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TournamentStatusBadge } from "@/components/tournament-status-badge";
 import { TournamentRegisterButtons } from "@/components/tournament-register-buttons";
+import { PlayerLink } from "@/components/player-link";
 import { formatDate } from "@/lib/utils";
 
 export default async function PlayerTournamentsPage() {
@@ -92,12 +93,12 @@ export default async function PlayerTournamentsPage() {
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {t.registrations.map((r) => (
-                          <span
+                          <PlayerLink
                             key={r.id}
-                            className="rounded-full bg-muted px-3 py-1 text-sm"
-                          >
-                            {r.user.nickname}
-                          </span>
+                            userId={r.userId}
+                            nickname={r.user.nickname}
+                            variant="chip"
+                          />
                         ))}
                       </div>
                     )}

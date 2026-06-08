@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TournamentStatusBadge } from "@/components/tournament-status-badge";
+import { PlayerLink } from "@/components/player-link";
 import { formatDate } from "@/lib/utils";
 import { decryptSensitiveUserFields } from "@/lib/user-sensitive-fields";
 
@@ -187,7 +188,9 @@ export default async function AdminTournamentDetailPage({
                 <tbody>
                   {registrations.map((r) => (
                     <tr key={r.id} className="border-b">
-                      <td className="py-2 pr-4">{r.user.nickname}</td>
+                      <td className="py-2 pr-4">
+                        <PlayerLink userId={r.user.id} nickname={r.user.nickname} />
+                      </td>
                       <td className="py-2 pr-4">{r.user.startGgTag || "—"}</td>
                       <td className="py-2 pr-4 font-mono text-xs">
                         {r.user.startGgUniqueCode || "—"}
@@ -231,7 +234,7 @@ export default async function AdminTournamentDetailPage({
                   <tr key={p.id} className="border-b">
                     <td className="py-2 pr-4 font-bold">#{p.placement}</td>
                     <td className="py-2 pr-4">
-                      <span>{p.user.nickname}</span>
+                      <PlayerLink userId={p.user.id} nickname={p.user.nickname} />
                       {p.user.isVirtual && (
                         <Badge variant="warning" className="ml-2 text-xs">虚拟账号</Badge>
                       )}

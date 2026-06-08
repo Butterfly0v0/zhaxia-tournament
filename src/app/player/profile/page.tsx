@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { getUserGameStats } from "@/lib/points";
 import { ProfileForm } from "@/components/forms/profile-form";
+import { DeleteAccountForm } from "@/components/forms/delete-account-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function PlayerProfilePage() {
@@ -57,6 +58,15 @@ export default async function PlayerProfilePage() {
               </tbody>
             </table>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-destructive/30">
+        <CardHeader>
+          <CardTitle className="text-destructive">注销账号</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DeleteAccountForm placementCount={stats.placements.length} />
         </CardContent>
       </Card>
     </div>

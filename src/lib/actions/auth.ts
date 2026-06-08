@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { hashPassword, loginUser } from "@/lib/auth";
 import { loginSchema, registerSchema, profileSchema } from "@/lib/validators";
 import { requireAuth } from "@/lib/auth";
+import { assertNicknameAvailable } from "@/lib/nickname";
 import { encryptSensitiveUserFields } from "@/lib/user-sensitive-fields";
 
 export async function registerAction(formData: FormData) {
@@ -27,6 +28,12 @@ export async function registerAction(formData: FormData) {
     return { error: "该用户名已被注册" };
   }
 
+  try {
+    await assertNicknameAvailable(parsed.data.nickname);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "该昵称已被使用" };
+  }
+
   const passwordHash = await hashPassword(parsed.data.password);
   await prisma.user.create({
     data: {
@@ -37,7 +44,10 @@ export async function registerAction(formData: FormData) {
     },
   });
 
-  await loginUser(parsed.data.username, parsed.data.password);
+  const loginResult = await loginUser(parsed.data.username, parsed.data.password);
+  if (!loginResult.ok) {
+    return { error: "注册成功但登录失败，请手动登录" };
+  }
   redirect("/player");
 }
 
@@ -52,12 +62,15 @@ export async function loginAction(formData: FormData) {
     return { error: parsed.error.errors[0].message };
   }
 
-  const user = await loginUser(parsed.data.username, parsed.data.password);
-  if (!user) {
+  const loginResult = await loginUser(parsed.data.username, parsed.data.password);
+  if (!loginResult.ok) {
+    if (loginResult.reason === "banned") {
+      return { error: "你的账号已被封禁，如有疑问请联系管理员" };
+    }
     return { error: "用户名或密码错误" };
   }
 
-  redirect(user.role === "ADMIN" ? "/admin" : "/player");
+  redirect(loginResult.user.role === "ADMIN" ? "/admin" : "/player");
 }
 
 export async function updateProfileAction(formData: FormData) {
@@ -74,6 +87,12 @@ export async function updateProfileAction(formData: FormData) {
   const parsed = profileSchema.safeParse(raw);
   if (!parsed.success) {
     return { error: parsed.error.errors[0].message };
+  }
+
+  try {
+    await assertNicknameAvailable(parsed.data.nickname, user.id);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "该昵称已被使用" };
   }
 
   const sensitiveFields = encryptSensitiveUserFields({

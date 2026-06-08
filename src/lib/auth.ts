@@ -1,7 +1,12 @@
 import bcrypt from "bcryptjs";
+import type { User } from "@prisma/client";
 import { prisma } from "./db";
 import { getSession } from "./session";
 import { decryptSensitiveUserFields } from "./user-sensitive-fields";
+
+export type LoginResult =
+  | { ok: true; user: User }
+  | { ok: false; reason: "invalid_credentials" | "banned" };
 
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 10);
@@ -26,12 +31,13 @@ export async function getCurrentUser() {
       startGgTag: true,
       startGgUniqueCode: true,
       role: true,
+      isVirtual: true,
       isBanned: true,
       createdAt: true,
     },
   });
 
-  if (!user || user.isBanned) return null;
+  if (!user || user.isBanned || user.isVirtual) return null;
   return decryptSensitiveUserFields(user);
 }
 
@@ -47,12 +53,23 @@ export async function requireAdmin() {
   return user;
 }
 
-export async function loginUser(username: string, password: string) {
+export async function loginUser(
+  username: string,
+  password: string
+): Promise<LoginResult> {
   const user = await prisma.user.findUnique({ where: { username } });
-  if (!user || user.isBanned) return null;
+  if (!user || user.isVirtual) {
+    return { ok: false, reason: "invalid_credentials" };
+  }
 
   const valid = await verifyPassword(password, user.passwordHash);
-  if (!valid) return null;
+  if (!valid) {
+    return { ok: false, reason: "invalid_credentials" };
+  }
+
+  if (user.isBanned) {
+    return { ok: false, reason: "banned" };
+  }
 
   const session = await getSession();
   session.userId = user.id;
@@ -62,7 +79,7 @@ export async function loginUser(username: string, password: string) {
   session.isLoggedIn = true;
   await session.save();
 
-  return user;
+  return { ok: true, user };
 }
 
 export async function logoutUser() {

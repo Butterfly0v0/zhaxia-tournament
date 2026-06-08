@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, logoutUser } from "@/lib/auth";
+import { deactivateAccount } from "@/lib/account-deletion";
 
 export async function registerForTournamentAction(tournamentId: string) {
   const user = await requireAuth();
@@ -64,5 +65,32 @@ export async function cancelRegistrationAction(tournamentId: string) {
   revalidatePath(`/tournaments/${tournamentId}`);
   revalidatePath("/player/tournaments");
   revalidatePath("/player/my-events");
+  return { success: true };
+}
+
+export async function deleteAccountAction(formData: FormData) {
+  const user = await requireAuth();
+
+  if (user.role === "ADMIN") {
+    return { error: "管理员账号不可在此注销" };
+  }
+
+  const password = formData.get("password") as string;
+  const confirm = (formData.get("confirm") as string)?.trim();
+
+  if (!password) return { error: "请输入密码" };
+  if (confirm !== "注销账号") return { error: "请输入「注销账号」以确认" };
+
+  try {
+    await deactivateAccount(user.id, password);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "注销失败";
+    return { error: message };
+  }
+
+  await logoutUser();
+
+  revalidatePath("/");
+  revalidatePath("/rankings");
   return { success: true };
 }

@@ -8,6 +8,7 @@ import { resolveStartGgEventId } from "@/lib/startgg";
 import { syncTournamentFromStartGg } from "@/lib/startgg-sync";
 import { applyTournamentPlacements } from "@/lib/placements";
 import { cleanupVirtualUserIfOrphaned } from "@/lib/virtual-user";
+import { assertNicknameAvailable } from "@/lib/nickname";
 
 export async function createGameAction(formData: FormData) {
   await requireAdmin();
@@ -373,6 +374,8 @@ export async function createAdminUserAction(formData: FormData) {
 
   const existing = await prisma.user.findUnique({ where: { username } });
   if (existing) throw new Error("用户名已存在");
+
+  await assertNicknameAvailable(nickname);
 
   await prisma.user.create({
     data: {

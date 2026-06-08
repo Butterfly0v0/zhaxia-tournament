@@ -1,4 +1,5 @@
 import { RankingEntry } from "@/lib/points";
+import { PlayerLink } from "@/components/player-link";
 import { Badge } from "@/components/ui/badge";
 
 export function RankingsTable({
@@ -38,14 +39,17 @@ export function RankingsTable({
               </td>
               <td className="py-3 pr-4">
                 <div className="font-medium flex items-center gap-2">
-                  {entry.nickname}
+                  <PlayerLink userId={entry.userId} nickname={entry.nickname} />
                   {entry.isVirtual && (
                     <Badge variant="warning" className="text-xs">虚拟</Badge>
                   )}
                 </div>
-                {entry.startGgTag && (
-                  <div className="text-xs text-muted-foreground">{entry.startGgTag}</div>
-                )}
+                {entry.startGgTag &&
+                  entry.startGgTag.trim() !== entry.nickname.trim() && (
+                    <div className="text-xs text-muted-foreground">
+                      {entry.startGgTag}
+                    </div>
+                  )}
               </td>
               <td className="py-3 pr-4 font-semibold text-primary">{entry.totalPoints}</td>
               <td className="py-3">{entry.tournamentCount}</td>

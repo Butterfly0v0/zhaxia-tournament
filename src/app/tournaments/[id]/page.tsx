@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { TournamentStatusBadge } from "@/components/tournament-status-badge";
 import { TournamentRegisterButtons } from "@/components/tournament-register-buttons";
+import { PlayerLink } from "@/components/player-link";
 import { formatDate } from "@/lib/utils";
 
 export default async function TournamentDetailPage({
@@ -140,7 +141,9 @@ export default async function TournamentDetailPage({
                 {tournament.placements.map((p) => (
                   <tr key={p.id} className="border-b last:border-0">
                     <td className="py-2 pr-4 font-bold">#{p.placement}</td>
-                    <td className="py-2 pr-4">{p.user.nickname}</td>
+                    <td className="py-2 pr-4">
+                      <PlayerLink userId={p.userId} nickname={p.user.nickname} />
+                    </td>
                     <td className="py-2 text-primary font-medium">+{p.pointsAwarded}</td>
                   </tr>
                 ))}
@@ -190,9 +193,12 @@ export default async function TournamentDetailPage({
             ) : (
               <div className="flex flex-wrap gap-2">
                 {tournament.registrations.map((r) => (
-                  <span key={r.id} className="rounded-full bg-muted px-3 py-1 text-sm">
-                    {r.user.nickname}
-                  </span>
+                  <PlayerLink
+                    key={r.id}
+                    userId={r.userId}
+                    nickname={r.user.nickname}
+                    variant="chip"
+                  />
                 ))}
               </div>
             )}

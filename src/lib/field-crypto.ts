@@ -60,10 +60,14 @@ export function decryptFieldWithSecret(
   const authTag = Buffer.from(authTagB64, "base64");
   const encrypted = Buffer.from(dataB64, "base64");
 
-  const decipher = createDecipheriv(ALGORITHM, key, iv);
-  decipher.setAuthTag(authTag);
-  const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
-  return decrypted.toString("utf8");
+  try {
+    const decipher = createDecipheriv(ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+    return decrypted.toString("utf8");
+  } catch {
+    return null;
+  }
 }
 
 export function encryptField(value: string | null | undefined): string | null {

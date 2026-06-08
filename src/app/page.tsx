@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getGameRankings } from "@/lib/points";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +9,8 @@ import { RankingsTable } from "@/components/rankings-table";
 import { formatDate } from "@/lib/utils";
 
 export default async function HomePage() {
+  const user = await getCurrentUser();
+
   const [games, upcomingTournaments] = await Promise.all([
     prisma.game.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
     prisma.tournament.findMany({
@@ -37,11 +40,22 @@ export default async function HomePage() {
           格斗游戏赛事报名、积分排名一站式平台。在 start.gg 征战，在这里积累荣耀。
         </p>
         <div className="flex gap-3 justify-center flex-wrap">
-          <Button asChild size="lg">
-            <Link href="/register">选手注册</Link>
-          </Button>
+          {user ? (
+            <Button asChild size="lg">
+              <Link href={user.role === "ADMIN" ? "/admin" : "/player"}>
+                {user.role === "ADMIN" ? "管理后台" : "个人中心"}
+              </Link>
+            </Button>
+          ) : (
+            <Button asChild size="lg">
+              <Link href="/register">选手注册</Link>
+            </Button>
+          )}
           <Button variant="outline" size="lg" asChild>
             <Link href="/rankings">查看排行榜</Link>
+          </Button>
+          <Button variant="outline" size="lg" asChild>
+            <Link href="/lookup">查询成绩</Link>
           </Button>
         </div>
       </section>

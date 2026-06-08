@@ -7,23 +7,42 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 
 export default async function AdminUsersPage() {
-  const users = await prisma.user.findMany({
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      username: true,
-      nickname: true,
-      startGgTag: true,
-      role: true,
-      isBanned: true,
-      createdAt: true,
-      _count: { select: { registrations: true, placements: true } },
-    },
-  });
+  const [users, pointTotals] = await Promise.all([
+    prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        username: true,
+        nickname: true,
+        startGgTag: true,
+        role: true,
+        isVirtual: true,
+        isBanned: true,
+        createdAt: true,
+        _count: { select: { registrations: true, placements: true } },
+      },
+    }),
+    prisma.placement.groupBy({
+      by: ["userId"],
+      _sum: { pointsAwarded: true },
+    }),
+  ]);
+
+  const pointsMap = new Map(
+    pointTotals.map((p) => [p.userId, p._sum.pointsAwarded ?? 0])
+  );
+  const virtualTotalPoints = users
+    .filter((u) => u.isVirtual)
+    .reduce((sum, u) => sum + (pointsMap.get(u.id) ?? 0), 0);
 
   return (
     <div className="space-y-8">
-      <h2 className="text-xl font-semibold">用户管理</h2>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <h2 className="text-xl font-semibold">用户管理</h2>
+        <p className="text-sm text-muted-foreground">
+          虚拟账号总积分：<span className="font-medium text-primary">{virtualTotalPoints}</span>
+        </p>
+      </div>
 
       <Card>
         <CardHeader>
@@ -60,13 +79,14 @@ export default async function AdminUsersPage() {
       </Card>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[720px]">
           <thead>
             <tr className="border-b text-left text-muted-foreground">
               <th className="pb-3 pr-4">用户名</th>
               <th className="pb-3 pr-4">昵称</th>
               <th className="pb-3 pr-4">start.gg</th>
               <th className="pb-3 pr-4">角色</th>
+              <th className="pb-3 pr-4">总积分</th>
               <th className="pb-3 pr-4">报名/成绩</th>
               <th className="pb-3 pr-4">状态</th>
               <th className="pb-3">操作</th>
@@ -75,15 +95,23 @@ export default async function AdminUsersPage() {
           <tbody>
             {users.map((u) => (
               <tr key={u.id} className="border-b">
-                <td className="py-3 pr-4">{u.username}</td>
-                <td className="py-3 pr-4">{u.nickname}</td>
-                <td className="py-3 pr-4 text-muted-foreground">{u.startGgTag || "-"}</td>
+                <td className="py-3 pr-4 font-mono text-xs">{u.username}</td>
+                <td className="py-3 pr-4">
+                  <span>{u.nickname}</span>
+                  {u.isVirtual && (
+                    <Badge variant="warning" className="ml-2 text-xs">虚拟</Badge>
+                  )}
+                </td>
+                <td className="py-3 pr-4 text-muted-foreground">{u.startGgTag || "—"}</td>
                 <td className="py-3 pr-4">
                   <Badge variant={u.role === "ADMIN" ? "default" : "secondary"}>
                     {u.role === "ADMIN" ? "管理员" : "选手"}
                   </Badge>
                 </td>
-                <td className="py-3 pr-4">
+                <td className="py-3 pr-4 font-medium text-primary">
+                  {pointsMap.get(u.id) ?? 0}
+                </td>
+                <td className="py-3 pr-4 text-muted-foreground">
                   {u._count.registrations} / {u._count.placements}
                 </td>
                 <td className="py-3 pr-4">
@@ -94,7 +122,7 @@ export default async function AdminUsersPage() {
                   )}
                 </td>
                 <td className="py-3">
-                  {u.role !== "ADMIN" && (
+                  {u.role !== "ADMIN" && !u.isVirtual && (
                     <form
                       action={async () => {
                         "use server";
