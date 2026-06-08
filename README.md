@@ -34,8 +34,8 @@
 ### 1. 克隆并安装依赖
 
 ```bash
-git clone https://github.com/Butterfly0v0/zaxia-tournament.git
-cd zaxia-tournament
+git clone https://github.com/Butterfly0v0/zhaxia-tournament.git
+cd zhaxia-tournament
 npm install
 ```
 
@@ -115,7 +115,7 @@ npm run dev
 
 1. 购买云服务器（Ubuntu 22.04+），安全组放行 22 / 80 / 443
 2. 安装 Node.js 20+、Nginx、Git
-3. 克隆仓库到服务器，例如 `/var/www/zaxia-tournament`
+3. 克隆仓库到服务器，例如 `/var/www/zhaxia-tournament`
 4. 创建生产环境 `.env`：
 
 ```env
