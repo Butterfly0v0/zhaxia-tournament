@@ -5,7 +5,12 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireAdmin, hashPassword } from "@/lib/auth";
 import { ensureAdminAction } from "@/lib/admin-action";
-import { gameSchema, tierSchema, tournamentSchema } from "@/lib/validators";
+import {
+  gameSchema,
+  tierSchema,
+  tournamentSchema,
+  adminResetPasswordSchema,
+} from "@/lib/validators";
 import { resolveStartGgEventId } from "@/lib/startgg";
 import { syncTournamentFromStartGg } from "@/lib/startgg-sync";
 import { applyTournamentPlacements } from "@/lib/placements";
@@ -424,6 +429,41 @@ export async function createAdminUserAction(formData: FormData) {
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "创建用户失败";
+    redirectAdminError("/admin/users", message);
+  }
+
+  revalidatePath("/admin/users");
+}
+
+export async function resetUserPasswordAction(formData: FormData) {
+  const authError = await ensureAdminAction();
+  if (authError) redirectAdminError("/admin/users", authError.error);
+
+  const raw = {
+    userId: formData.get("userId") as string,
+    newPassword: formData.get("newPassword") as string,
+  };
+
+  const parsed = adminResetPasswordSchema.safeParse(raw);
+  if (!parsed.success) {
+    redirectAdminError("/admin/users", parsed.error.errors[0].message);
+  }
+
+  const target = await prisma.user.findUnique({
+    where: { id: parsed.data.userId },
+    select: { id: true, isVirtual: true },
+  });
+
+  if (!target) redirectAdminError("/admin/users", "用户不存在");
+  if (target.isVirtual) redirectAdminError("/admin/users", "虚拟账号无法重置密码");
+
+  try {
+    await prisma.user.update({
+      where: { id: parsed.data.userId },
+      data: { passwordHash: await hashPassword(parsed.data.newPassword) },
+    });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "重置密码失败";
     redirectAdminError("/admin/users", message);
   }
 

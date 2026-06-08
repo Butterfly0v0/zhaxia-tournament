@@ -51,9 +51,13 @@ export async function Header() {
               <span className="text-sm text-muted-foreground hidden sm:inline">
                 {user.nickname}
               </span>
-              {user.role === "PLAYER" && (
+              {user.role === "PLAYER" ? (
                 <Button variant="outline" size="sm" asChild>
                   <Link href="/player">个人中心</Link>
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/player/profile#password">账号设置</Link>
                 </Button>
               )}
               <form action={logoutAction}>

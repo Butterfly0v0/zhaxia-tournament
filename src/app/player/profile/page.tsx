@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { getUserGameStats } from "@/lib/points";
 import { ProfileForm } from "@/components/forms/profile-form";
+import { ChangePasswordForm } from "@/components/forms/change-password-form";
 import { DeleteAccountForm } from "@/components/forms/delete-account-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -26,6 +27,15 @@ export default async function PlayerProfilePage() {
             defaultStartGgTag={user.startGgTag || ""}
             defaultStartGgUniqueCode={user.startGgUniqueCode || ""}
           />
+        </CardContent>
+      </Card>
+
+      <Card id="password">
+        <CardHeader>
+          <CardTitle>修改密码</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ChangePasswordForm />
         </CardContent>
       </Card>
 

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { ResetUserPasswordForm } from "@/components/admin/reset-user-password-form";
 
 export default async function AdminUsersPage({
   searchParams,
@@ -129,18 +130,23 @@ export default async function AdminUsersPage({
                   )}
                 </td>
                 <td className="py-3">
-                  {u.role !== "ADMIN" && !u.isVirtual && (
-                    <form
-                      action={async () => {
-                        "use server";
-                        await toggleBanUserAction(u.id, !u.isBanned);
-                      }}
-                    >
-                      <Button type="submit" variant="outline" size="sm">
-                        {u.isBanned ? "解封" : "封禁"}
-                      </Button>
-                    </form>
-                  )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {!u.isVirtual && (
+                      <ResetUserPasswordForm userId={u.id} username={u.username} />
+                    )}
+                    {u.role !== "ADMIN" && !u.isVirtual && (
+                      <form
+                        action={async () => {
+                          "use server";
+                          await toggleBanUserAction(u.id, !u.isBanned);
+                        }}
+                      >
+                        <Button type="submit" variant="outline" size="sm">
+                          {u.isBanned ? "解封" : "封禁"}
+                        </Button>
+                      </form>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

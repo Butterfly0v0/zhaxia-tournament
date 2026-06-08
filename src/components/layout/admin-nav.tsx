@@ -10,6 +10,7 @@ const links = [
   { href: "/admin/tiers", label: "等级与积分" },
   { href: "/admin/tournaments", label: "赛事管理" },
   { href: "/admin/users", label: "用户管理" },
+  { href: "/player/profile#password", label: "修改密码" },
 ];
 
 export function AdminNav() {

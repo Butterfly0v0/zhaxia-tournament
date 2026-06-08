@@ -19,6 +19,22 @@ export const registerSchema = z.object({
   path: ["confirmPassword"],
 });
 
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "请输入当前密码"),
+    newPassword: z.string().min(6, "新密码至少6个字符"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "两次新密码不一致",
+    path: ["confirmPassword"],
+  });
+
+export const adminResetPasswordSchema = z.object({
+  userId: z.string().min(1),
+  newPassword: z.string().min(6, "新密码至少6个字符"),
+});
+
 export const profileSchema = z.object({
   nickname: z.string().min(1).max(32),
   email: z
