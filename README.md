@@ -137,7 +137,7 @@ npm run db:seed          # 仅首次部署
 npm run db:encrypt-fields # 加密已有敏感字段（升级启用加密时执行）
 npm run build
 npm install -g pm2
-pm2 start npm --name zaxia -- start
+pm2 start npm --name zhaxia -- start
 pm2 save && pm2 startup
 ```
 
@@ -176,7 +176,7 @@ git pull
 npm install
 npx prisma migrate deploy
 npm run build
-pm2 restart zaxia
+pm2 restart zhaxia
 ```
 
 **如何 SSH 登录服务器（不熟悉 Linux 可参考）**
@@ -196,15 +196,26 @@ pm2 restart zaxia
 2. 登录管理员账号
 3. 点击「游戏管理」「赛事管理」等子页面，应能正常进入，不再跳回登录页
 
+**若 `git pull` 报错 `RPC failed; curl 16 Error in the HTTP2 framing layer`**
+
+这是服务器访问 GitHub 时 HTTP/2 不稳定导致的，可改用 HTTP/1.1 拉取：
+
+```bash
+cd /var/www/zhaxia-tournament
+git -c http.version=HTTP/1.1 pull
+```
+
+或直接运行 `bash scripts/update-server.sh`（脚本已内置该修复）。
+
 **若仍跳回登录页，请检查**
 
 | 检查项 | 命令 / 说明 |
 |--------|-------------|
 | `.env` 是否存在 | `ls -la .env` |
 | `SESSION_SECRET` 是否设置 | `grep SESSION_SECRET .env`（至少 32 位随机字符） |
-| 应用是否在运行 | `pm2 status`（`zaxia` 状态应为 `online`） |
+| 应用是否在运行 | `pm2 status`（`zhaxia` 状态应为 `online`） |
 | 是否用了 HTTPS | 生产环境 `NODE_ENV=production` 时 Cookie 需要 HTTPS；仅用 HTTP 访问 IP 可能导致登录异常 |
-| 查看错误日志 | `pm2 logs zaxia --lines 50` |
+| 查看错误日志 | `pm2 logs zhaxia --lines 50` |
 
 ## 常用命令
 

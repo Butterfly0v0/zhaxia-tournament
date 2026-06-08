@@ -10,7 +10,8 @@ if [ ! -f .env ]; then
 fi
 
 echo ">>> 拉取最新代码..."
-git pull
+# 部分服务器访问 GitHub 时 HTTP/2 不稳定，改用 HTTP/1.1 避免 curl 16 报错
+git -c http.version=HTTP/1.1 pull
 
 echo ">>> 安装依赖..."
 npm install
@@ -22,6 +23,16 @@ echo ">>> 构建（需要 .env 中的 SESSION_SECRET）..."
 npm run build
 
 echo ">>> 重启应用..."
-pm2 restart zaxia
+if pm2 describe zhaxia >/dev/null 2>&1; then
+  pm2 restart zhaxia
+elif pm2 describe zaxia >/dev/null 2>&1; then
+  echo ">>> 检测到旧进程名 zaxia，正在迁移为 zhaxia..."
+  pm2 delete zaxia
+  pm2 start npm --name zhaxia -- start
+  pm2 save
+else
+  pm2 start npm --name zhaxia -- start
+  pm2 save
+fi
 
 echo ">>> 更新完成！请在浏览器刷新页面测试。"
