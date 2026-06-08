@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db";
-import { createTierAction, updatePointRulesAction } from "@/lib/actions/admin";
+import { createTierAction } from "@/lib/actions/admin";
 import { ActionErrorBanner } from "@/components/admin/action-error-banner";
+import { TierPointRulesForm } from "@/components/admin/tier-point-rules-form";
+import { DeleteTierButton } from "@/components/admin/delete-tier-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +15,10 @@ export default async function AdminTiersPage({
 }) {
   const { error } = await searchParams;
   const tiers = await prisma.eventTier.findMany({
-    include: { pointRules: { orderBy: { placement: "asc" } } },
+    include: {
+      pointRules: { orderBy: { placement: "asc" } },
+      _count: { select: { tournaments: true } },
+    },
     orderBy: { sortOrder: "asc" },
   });
 
@@ -49,62 +54,29 @@ export default async function AdminTiersPage({
         </CardContent>
       </Card>
 
-      {tiers.map((tier) => {
-        const rules = tier.pointRules.length > 0
-          ? tier.pointRules
-          : Array.from({ length: 8 }, (_, i) => ({ placement: i + 1, points: 0 }));
-
-        return (
-          <Card key={tier.id}>
-            <CardHeader>
-              <CardTitle>{tier.name} ({tier.code})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form action={updatePointRulesAction}>
-                <input type="hidden" name="tierId" value={tier.id} />
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm mb-4">
-                    <thead>
-                      <tr className="border-b text-left">
-                        <th className="pb-2 pr-4">名次</th>
-                        <th className="pb-2">积分</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rules.map((rule, idx) => (
-                        <tr key={idx} className="border-b">
-                          <td className="py-2 pr-4">
-                            <Input
-                              name="placement"
-                              type="number"
-                              defaultValue={rule.placement}
-                              className="w-20"
-                              min={1}
-                            />
-                          </td>
-                          <td className="py-2">
-                            <Input
-                              name="points"
-                              type="number"
-                              defaultValue={rule.points}
-                              className="w-24"
-                              min={0}
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <p className="text-xs text-muted-foreground mb-3">
-                  可修改行数：留空名次的行将被忽略。需要更多名次请保存后再次编辑添加。
-                </p>
-                <Button type="submit" size="sm">保存积分表</Button>
-              </form>
-            </CardContent>
-          </Card>
-        );
-      })}
+      {tiers.map((tier) => (
+        <Card key={tier.id}>
+          <CardHeader className="flex flex-row items-start justify-between gap-4">
+            <CardTitle>
+              {tier.name} ({tier.code})
+            </CardTitle>
+            <DeleteTierButton
+              tierId={tier.id}
+              tierName={tier.name}
+              tournamentCount={tier._count.tournaments}
+            />
+          </CardHeader>
+          <CardContent>
+            <TierPointRulesForm
+              tierId={tier.id}
+              initialRules={tier.pointRules.map((rule) => ({
+                placement: rule.placement,
+                points: rule.points,
+              }))}
+            />
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }

@@ -98,25 +98,77 @@ export async function createTierAction(formData: FormData) {
 
 export async function updatePointRulesAction(formData: FormData) {
   const authError = await ensureAdminAction();
-  if (authError) redirectAdminError("/admin/tiers", authError.error);
+  if (authError) return authError;
 
   const tierId = formData.get("tierId") as string;
-  if (!tierId) redirectAdminError("/admin/tiers", "无效的等级 ID");
+  if (!tierId) return { error: "无效的等级 ID" };
 
   const placements = formData.getAll("placement").map((v) => parseInt(v as string, 10));
   const points = formData.getAll("points").map((v) => parseInt(v as string, 10));
 
-  await prisma.pointRule.deleteMany({ where: { tierId } });
-
+  const entries: { placement: number; points: number }[] = [];
   for (let i = 0; i < placements.length; i++) {
-    if (placements[i] > 0 && points[i] >= 0) {
-      await prisma.pointRule.create({
-        data: { tierId, placement: placements[i], points: points[i] },
-      });
+    const placement = placements[i];
+    const pts = points[i];
+    if (!Number.isFinite(placement) || placement <= 0) continue;
+    if (!Number.isFinite(pts) || pts < 0) continue;
+    entries.push({ placement, points: pts });
+  }
+
+  const seen = new Set<number>();
+  for (const entry of entries) {
+    if (seen.has(entry.placement)) {
+      return { error: `名次 ${entry.placement} 重复，请修改后再保存` };
     }
+    seen.add(entry.placement);
+  }
+
+  try {
+    await prisma.$transaction([
+      prisma.pointRule.deleteMany({ where: { tierId } }),
+      ...entries.map((entry) =>
+        prisma.pointRule.create({
+          data: { tierId, placement: entry.placement, points: entry.points },
+        })
+      ),
+    ]);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "保存失败";
+    return { error: message };
   }
 
   revalidatePath("/admin/tiers");
+  return { success: true };
+}
+
+export async function deleteTierAction(formData: FormData) {
+  const authError = await ensureAdminAction();
+  if (authError) return authError;
+
+  const tierId = formData.get("tierId") as string;
+  if (!tierId) return { error: "无效的等级 ID" };
+
+  const tier = await prisma.eventTier.findUnique({
+    where: { id: tierId },
+    include: { _count: { select: { tournaments: true } } },
+  });
+  if (!tier) return { error: "等级不存在" };
+
+  if (tier._count.tournaments > 0) {
+    return {
+      error: `该等级下还有 ${tier._count.tournaments} 场赛事，请先处理相关赛事`,
+    };
+  }
+
+  try {
+    await prisma.eventTier.delete({ where: { id: tierId } });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "删除失败";
+    return { error: message };
+  }
+
+  revalidatePath("/admin/tiers");
+  return { success: true };
 }
 
 export async function createTournamentAction(formData: FormData) {
