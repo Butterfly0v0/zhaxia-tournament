@@ -1,0 +1,185 @@
+# 炸虾格斗会赛事管理网站
+
+格斗游戏赛事报名、积分排名与赛事管理平台。赛事对阵在 [start.gg](https://www.start.gg) 进行，本站负责报名、名次录入/同步与积分排名。
+
+## 功能
+
+### 选手端
+
+- 注册 / 登录、选手中心
+- 浏览并报名开放中的赛事，查看本站报名名单
+- 个人资料：昵称、邮箱（选填）、QQ（选填）、start.gg 昵称、start.gg 唯一代码
+- 我的赛事、积分历史
+
+### 管理员端
+
+- 游戏库、赛事等级与积分表配置
+- 赛事 CRUD、报名名单管理（含选手联系信息与 start.gg 资料）
+- 从 start.gg 拉取赛事信息 / 选手 / 结果，支持多项目赛事选择
+- 手动录入名次、虚拟账号积分转移
+
+### 公开页面
+
+- 首页、赛事详情、按游戏独立排行榜
+
+## 技术栈
+
+- Next.js 15 (App Router) + TypeScript
+- Prisma + SQLite
+- Tailwind CSS
+- iron-session + bcrypt
+
+## 本地开发
+
+### 1. 克隆并安装依赖
+
+```bash
+git clone https://github.com/Butterfly0v0/zaxia-tournament.git
+cd zaxia-tournament
+npm install
+```
+
+### 2. 配置环境变量
+
+复制示例文件并编辑：
+
+```bash
+cp .env.example .env
+```
+
+`.env` 说明：
+
+| 变量 | 必填 | 说明 |
+|------|------|------|
+| `DATABASE_URL` | 是 | SQLite 路径，开发环境可用 `file:./dev.db` |
+| `SESSION_SECRET` | 是 | 至少 32 位随机字符串，用于加密 Session |
+| `STARTGG_API_TOKEN` | 否 | start.gg API Token，同步功能需要 |
+| `NODE_ENV` | 否 | 开发环境为 `development`，生产环境为 `production` |
+
+> **切勿将 `.env` 提交到 Git。** 仓库仅包含 `.env.example` 模板。
+
+### 3. 初始化数据库
+
+```bash
+npx prisma migrate dev
+npm run db:seed
+```
+
+### 4. 启动开发服务器
+
+```bash
+npm run dev
+```
+
+访问 http://localhost:3000
+
+### 种子数据默认管理员
+
+执行 `npm run db:seed` 后会创建默认管理员账号（仅用于首次部署）：
+
+- 用户名：`admin`
+- 密码：`admin123`
+
+**上线后请立即修改密码**，或在用户管理中创建新管理员并停用默认账号。
+
+## 报名流程说明
+
+1. 选手在本站「赛事报名」页面报名
+2. 管理员在后台「本站报名名单」查看选手信息（含 start.gg 昵称、唯一代码、邮箱、QQ）
+3. 管理员根据上述信息，在 start.gg 后台手动添加参赛选手
+4. 对阵与赛程以 start.gg 为准；本站负责积分结算与排名
+
+## start.gg API 配置与同步
+
+1. 登录 [start.gg](https://www.start.gg) → Account Settings → Developer Settings
+2. 创建 API Token，填入 `.env` 的 `STARTGG_API_TOKEN`
+3. 创建赛事时填写 start.gg 链接，点击「从链接拉取」预览信息
+   - 支持锦标赛链接（`/tournament/xxx`）或项目链接（含 `/event/`）
+   - 单项目：标题为锦标赛名
+   - 多项目：用户选择项目后，标题为 `锦标赛名 - 项目名`
+4. 勾选「保存时自动从 start.gg 同步」可在保存时拉取选手与结果（不会覆盖手动设置的状态与标题）
+5. 管理后台可随时「一键同步 start.gg 数据」
+6. 未匹配到本站账号的成绩记入虚拟账号，赛后可将积分转移到真实账号
+
+## 生产环境部署（云服务器）
+
+本项目使用 SQLite 文件数据库，**推荐部署到 Linux 云服务器（VPS）**，不适合 Vercel 等 Serverless 平台。
+
+### 部署架构
+
+```
+选手浏览器 → HTTPS (443) → Nginx 反向代理 → Next.js (3000) → SQLite 文件
+```
+
+### 简要步骤
+
+1. 购买云服务器（Ubuntu 22.04+），安全组放行 22 / 80 / 443
+2. 安装 Node.js 20+、Nginx、Git
+3. 克隆仓库到服务器，例如 `/var/www/zaxia-tournament`
+4. 创建生产环境 `.env`：
+
+```env
+DATABASE_URL="file:./prod.db"
+SESSION_SECRET="你的强随机字符串至少32位"
+STARTGG_API_TOKEN="你的start.gg Token"
+NODE_ENV="production"
+```
+
+5. 构建并启动：
+
+```bash
+npm install
+npx prisma migrate deploy
+npm run db:seed          # 仅首次部署
+npm run build
+npm install -g pm2
+pm2 start npm --name zaxia -- start
+pm2 save && pm2 startup
+```
+
+6. 配置 Nginx 反向代理到 `http://127.0.0.1:3000`
+7. 用 Certbot 申请 HTTPS 证书（Let's Encrypt）
+8. 将域名 A 记录解析到服务器公网 IP
+
+> 生产环境必须使用 HTTPS，否则登录 Cookie（`secure` 模式）无法正常工作。
+
+### 数据备份
+
+SQLite 数据库为单个文件，定期备份即可：
+
+```bash
+cp prisma/prod.db /backup/prod-$(date +%Y%m%d).db
+```
+
+### 更新部署
+
+```bash
+git pull
+npm install
+npx prisma migrate deploy
+npm run build
+pm2 restart zaxia
+```
+
+## 常用命令
+
+```bash
+npm run dev          # 开发服务器
+npm run build        # 生产构建
+npm run start        # 启动生产服务（需先 build）
+npm run db:migrate   # 开发环境数据库迁移
+npm run db:seed      # 写入种子数据
+npm run db:studio    # Prisma Studio 数据库管理
+```
+
+## 安全与隐私
+
+以下内容**不应提交到 Git**（已在 `.gitignore` 中排除）：
+
+- `.env` 及所有环境变量文件
+- `prisma/*.db` 数据库文件（含用户、报名、积分等数据）
+- `node_modules/`、`.next/` 构建产物
+
+## 许可证
+
+本项目为炸虾格斗会社区内部使用，部署前请根据实际需要选择合适的开源许可证。

@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PLAYER
+  ADMIN
+}
+
+enum TournamentStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  COMPLETED
+}
+
+enum RegistrationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  nickname          String
+  email             String?
+  qq                String?
+  startGgTag        String?
+  startGgUniqueCode String?
+  role              Role     @default(PLAYER)
+  isVirtual    Boolean  @default(false)
+  isBanned     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  registrations Registration[]
+  placements    Placement[]
+}
+
+model Game {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tournaments Tournament[]
+}
+
+model EventTier {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique
+  description String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pointRules  PointRule[]
+  tournaments Tournament[]
+}
+
+model PointRule {
+  id        String @id @default(cuid())
+  tierId    String
+  placement Int
+  points    Int
+
+  tier EventTier @relation(fields: [tierId], references: [id], onDelete: Cascade)
+
+  @@unique([tierId, placement])
+}
+
+model Tournament {
+  id             String           @id @default(cuid())
+  title          String
+  description    String?
+  gameId         String
+  tierId         String
+  startDate      DateTime
+  regDeadline    DateTime
+  startGgUrl            String?
+  startGgEventId        String?
+  startGgEntrantsCache  Json?
+  lastSyncedAt          DateTime?
+  status         TournamentStatus @default(DRAFT)
+  maxPlayers     Int?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  game          Game           @relation(fields: [gameId], references: [id])
+  tier          EventTier      @relation(fields: [tierId], references: [id])
+  registrations Registration[]
+  placements    Placement[]
+}
+
+model Registration {
+  id           String             @id @default(cuid())
+  tournamentId String
+  userId       String
+  status       RegistrationStatus @default(CONFIRMED)
+  registeredAt DateTime           @default(now())
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, userId])
+}
+
+model Placement {
+  id           String   @id @default(cuid())
+  tournamentId String
+  userId       String
+  placement    Int
+  pointsAwarded Int
+  recordedAt   DateTime @default(now())
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, userId])
+}
