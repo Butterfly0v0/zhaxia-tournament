@@ -53,6 +53,7 @@ cp .env.example .env
 |------|------|------|
 | `DATABASE_URL` | 是 | SQLite 路径，开发环境可用 `file:./dev.db` |
 | `SESSION_SECRET` | 是 | 至少 32 位随机字符串，用于加密 Session |
+| `ENCRYPTION_KEY` | 生产必填 | 至少 32 位随机字符串，用于 AES 加密邮箱 / QQ / start.gg 唯一代码 |
 | `STARTGG_API_TOKEN` | 否 | start.gg API Token，同步功能需要 |
 | `NODE_ENV` | 否 | 开发环境为 `development`，生产环境为 `production` |
 
@@ -63,6 +64,7 @@ cp .env.example .env
 ```bash
 npx prisma migrate dev
 npm run db:seed
+npm run db:encrypt-fields   # 加密数据库中已有的敏感字段（首次启用加密时执行）
 ```
 
 ### 4. 启动开发服务器
@@ -121,6 +123,7 @@ npm run dev
 ```env
 DATABASE_URL="file:./prod.db"
 SESSION_SECRET="你的强随机字符串至少32位"
+ENCRYPTION_KEY="另一个强随机字符串至少32位"
 STARTGG_API_TOKEN="你的start.gg Token"
 NODE_ENV="production"
 ```
@@ -131,6 +134,7 @@ NODE_ENV="production"
 npm install
 npx prisma migrate deploy
 npm run db:seed          # 仅首次部署
+npm run db:encrypt-fields # 加密已有敏感字段（升级启用加密时执行）
 npm run build
 npm install -g pm2
 pm2 start npm --name zaxia -- start
@@ -168,11 +172,57 @@ npm run dev          # 开发服务器
 npm run build        # 生产构建
 npm run start        # 启动生产服务（需先 build）
 npm run db:migrate   # 开发环境数据库迁移
-npm run db:seed      # 写入种子数据
-npm run db:studio    # Prisma Studio 数据库管理
+npm run db:seed           # 写入种子数据
+npm run db:encrypt-fields      # 加密邮箱 / QQ / 唯一代码等敏感字段
+npm run db:rotate-encryption-key # 将敏感字段从旧密钥重加密到新密钥
+npm run db:studio              # Prisma Studio 数据库管理
 ```
 
 ## 安全与隐私
+
+### 敏感字段加密
+
+邮箱、QQ 号、start.gg 唯一代码在数据库中以 **AES-256-GCM** 加密存储（密文前缀 `enc:v1:`）。应用读取时自动解密，管理员后台与导出 CSV 仍显示明文。
+
+- 生产环境必须配置 `ENCRYPTION_KEY`，且与 `SESSION_SECRET` 使用不同值
+- 生成示例：`openssl rand -base64 32`
+- **切勿丢失 `ENCRYPTION_KEY`**，否则已加密数据无法恢复
+- 从旧版本升级时，配置密钥后执行 `npm run db:encrypt-fields` 加密历史明文数据
+
+### 轮换加密密钥
+
+如需更换 `ENCRYPTION_KEY`，**不要**只修改 `.env`，必须先解密再重加密。
+
+**操作前：**
+
+1. 备份数据库：`cp prisma/prod.db prisma/prod.db.backup`
+2. 停止应用（避免轮换期间有人修改资料）：`pm2 stop zhaxia`
+3. 生成新密钥：`openssl rand -base64 32`
+
+**执行轮换（Linux / macOS）：**
+
+```bash
+ENCRYPTION_KEY_OLD="旧密钥" ENCRYPTION_KEY="新密钥" npm run db:rotate-encryption-key
+```
+
+**Windows PowerShell：**
+
+```powershell
+$env:ENCRYPTION_KEY_OLD="旧密钥"
+$env:ENCRYPTION_KEY="新密钥"
+npm run db:rotate-encryption-key
+```
+
+**轮换后：**
+
+1. 将 `.env` 中的 `ENCRYPTION_KEY` 更新为新密钥（删除临时的 `ENCRYPTION_KEY_OLD`）
+2. 重启应用：`pm2 start zhaxia`
+3. 验证选手个人资料、管理后台报名名单、导出 CSV 显示正常
+4. 确认无误后再删除旧密钥备份
+
+若轮换脚本报错，用备份数据库回滚，并用**旧密钥**恢复 `.env` 后重启。
+
+### 不应提交到 Git 的内容
 
 以下内容**不应提交到 Git**（已在 `.gitignore` 中排除）：
 

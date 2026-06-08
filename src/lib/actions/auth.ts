@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { hashPassword, loginUser } from "@/lib/auth";
 import { loginSchema, registerSchema, profileSchema } from "@/lib/validators";
 import { requireAuth } from "@/lib/auth";
+import { encryptSensitiveUserFields } from "@/lib/user-sensitive-fields";
 
 export async function registerAction(formData: FormData) {
   const raw = {
@@ -75,14 +76,20 @@ export async function updateProfileAction(formData: FormData) {
     return { error: parsed.error.errors[0].message };
   }
 
+  const sensitiveFields = encryptSensitiveUserFields({
+    email: parsed.data.email || null,
+    qq: parsed.data.qq || null,
+    startGgUniqueCode: parsed.data.startGgUniqueCode || null,
+  });
+
   await prisma.user.update({
     where: { id: user.id },
     data: {
       nickname: parsed.data.nickname,
-      email: parsed.data.email || null,
-      qq: parsed.data.qq || null,
+      email: sensitiveFields.email,
+      qq: sensitiveFields.qq,
       startGgTag: parsed.data.startGgTag || null,
-      startGgUniqueCode: parsed.data.startGgUniqueCode || null,
+      startGgUniqueCode: sensitiveFields.startGgUniqueCode,
     },
   });
 

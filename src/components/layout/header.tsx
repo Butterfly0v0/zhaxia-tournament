@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { logoutAction } from "@/lib/actions/logout";
@@ -9,11 +10,15 @@ export async function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/95 backdrop-blur">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-          <span className="text-2xl">🦐</span>
-          <span className="bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
-            炸虾格斗会
-          </span>
+        <Link href="/" className="flex items-center shrink-0">
+          <Image
+            src="/images/EbifightClub-logo.png"
+            alt="炸虾格斗会 Ebifight Club"
+            width={200}
+            height={56}
+            className="h-10 w-auto"
+            priority
+          />
         </Link>
 
         <nav className="hidden md:flex items-center gap-6 text-sm">

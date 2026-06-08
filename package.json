@@ -9,6 +9,8 @@
     "lint": "next lint",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
+    "db:encrypt-fields": "tsx scripts/encrypt-existing-fields.ts",
+    "db:rotate-encryption-key": "tsx scripts/rotate-encryption-key.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate"
   },

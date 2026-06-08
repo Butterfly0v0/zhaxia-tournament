@@ -6,6 +6,7 @@ import { TournamentForm } from "@/components/forms/tournament-form";
 import { ManualPlacementsForm } from "@/components/admin/manual-placements-form";
 import { StartGgSyncPanel } from "@/components/admin/startgg-sync-panel";
 import { CancelRegistrationButton } from "@/components/admin/registration-actions";
+import { ExportRegistrationsButton } from "@/components/admin/export-registrations-button";
 import { ResetResultsButton } from "@/components/admin/reset-results-button";
 import { DeleteTournamentButton } from "@/components/admin/delete-tournament-button";
 import { TransferPlacementButton } from "@/components/admin/transfer-placement-button";
@@ -14,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TournamentStatusBadge } from "@/components/tournament-status-badge";
 import { formatDate } from "@/lib/utils";
+import { decryptSensitiveUserFields } from "@/lib/user-sensitive-fields";
 
 export default async function AdminTournamentDetailPage({
   params,
@@ -64,7 +66,11 @@ export default async function AdminTournamentDetailPage({
 
   const pointRules = Object.fromEntries(pointRulesMap);
 
-  const activeRegistrations = tournament.registrations.filter((r) => r.status !== "CANCELLED");
+  const registrations = tournament.registrations.map((r) => ({
+    ...r,
+    user: decryptSensitiveUserFields(r.user),
+  }));
+  const activeRegistrations = registrations.filter((r) => r.status !== "CANCELLED");
   const isCompleted = tournament.status === "COMPLETED";
 
   return (
@@ -153,11 +159,15 @@ export default async function AdminTournamentDetailPage({
       )}
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-4">
           <CardTitle>本站报名名单 ({activeRegistrations.length})</CardTitle>
+          <ExportRegistrationsButton
+            tournamentId={id}
+            disabled={registrations.length === 0}
+          />
         </CardHeader>
         <CardContent>
-          {tournament.registrations.length === 0 ? (
+          {registrations.length === 0 ? (
             <p className="text-muted-foreground">暂无报名</p>
           ) : (
             <div className="overflow-x-auto">
@@ -175,7 +185,7 @@ export default async function AdminTournamentDetailPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {tournament.registrations.map((r) => (
+                  {registrations.map((r) => (
                     <tr key={r.id} className="border-b">
                       <td className="py-2 pr-4">{r.user.nickname}</td>
                       <td className="py-2 pr-4">{r.user.startGgTag || "—"}</td>
