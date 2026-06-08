@@ -13,6 +13,9 @@ import { cleanupVirtualUserIfOrphaned } from "@/lib/virtual-user";
 import { assertNicknameAvailable } from "@/lib/nickname";
 
 function redirectAdminError(path: string, message: string): never {
+  if (message.includes("登录") || message.includes("管理员权限")) {
+    redirect(`/login?error=${encodeURIComponent(message)}`);
+  }
   redirect(`${path}?error=${encodeURIComponent(message)}`);
 }
 
@@ -37,12 +40,14 @@ export async function createGameAction(formData: FormData) {
     redirectAdminError("/admin/games", message);
   }
   revalidatePath("/admin/games");
-  redirect("/admin/games");
 }
 
-export async function updateGameAction(id: string, formData: FormData) {
+export async function updateGameAction(formData: FormData) {
   const authError = await ensureAdminAction();
   if (authError) redirectAdminError("/admin/games", authError.error);
+
+  const id = formData.get("gameId") as string;
+  if (!id) redirectAdminError("/admin/games", "无效的游戏 ID");
 
   const raw = {
     name: formData.get("name") as string,
@@ -61,7 +66,6 @@ export async function updateGameAction(id: string, formData: FormData) {
     redirectAdminError("/admin/games", message);
   }
   revalidatePath("/admin/games");
-  redirect("/admin/games");
 }
 
 export async function createTierAction(formData: FormData) {
@@ -85,11 +89,14 @@ export async function createTierAction(formData: FormData) {
     redirectAdminError("/admin/tiers", message);
   }
   revalidatePath("/admin/tiers");
-  redirect("/admin/tiers");
 }
 
-export async function updatePointRulesAction(tierId: string, formData: FormData) {
-  await requireAdmin();
+export async function updatePointRulesAction(formData: FormData) {
+  const authError = await ensureAdminAction();
+  if (authError) redirectAdminError("/admin/tiers", authError.error);
+
+  const tierId = formData.get("tierId") as string;
+  if (!tierId) redirectAdminError("/admin/tiers", "无效的等级 ID");
 
   const placements = formData.getAll("placement").map((v) => parseInt(v as string, 10));
   const points = formData.getAll("points").map((v) => parseInt(v as string, 10));
@@ -421,7 +428,6 @@ export async function createAdminUserAction(formData: FormData) {
   }
 
   revalidatePath("/admin/users");
-  redirect("/admin/users");
 }
 
 export async function toggleBanUserAction(userId: string, isBanned: boolean) {

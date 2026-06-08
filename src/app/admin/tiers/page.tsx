@@ -60,7 +60,8 @@ export default async function AdminTiersPage({
               <CardTitle>{tier.name} ({tier.code})</CardTitle>
             </CardHeader>
             <CardContent>
-              <form action={updatePointRulesAction.bind(null, tier.id)}>
+              <form action={updatePointRulesAction}>
+                <input type="hidden" name="tierId" value={tier.id} />
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm mb-4">
                     <thead>

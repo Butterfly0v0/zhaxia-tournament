@@ -21,7 +21,8 @@ export const sessionOptions: SessionOptions = {
   password: process.env.SESSION_SECRET || "complex_password_at_least_32_characters_long",
   cookieName: "zhaxia_session",
   cookieOptions: {
-    secure: process.env.NODE_ENV === "production",
+    // 仅在使用 HTTPS 时启用 Secure；通过 IP + HTTP 访问时需保持 false，否则表单提交会丢失登录态
+    secure: process.env.USE_HTTPS === "true",
     httpOnly: true,
     sameSite: "lax",
     maxAge: 60 * 60 * 24 * 7,

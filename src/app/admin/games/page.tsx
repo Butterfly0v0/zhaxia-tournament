@@ -51,7 +51,8 @@ export default async function AdminGamesPage({
         {games.map((game) => (
           <Card key={game.id}>
             <CardContent className="pt-6">
-              <form action={updateGameAction.bind(null, game.id)} className="grid gap-4 md:grid-cols-2">
+              <form action={updateGameAction} className="grid gap-4 md:grid-cols-2">
+                <input type="hidden" name="gameId" value={game.id} />
                 <div className="space-y-2">
                   <Label>名称</Label>
                   <Input name="name" defaultValue={game.name} required />

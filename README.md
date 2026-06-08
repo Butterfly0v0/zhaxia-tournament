@@ -126,9 +126,12 @@ SESSION_SECRET="你的强随机字符串至少32位"
 ENCRYPTION_KEY="另一个强随机字符串至少32位"
 STARTGG_API_TOKEN="你的start.gg Token"
 NODE_ENV="production"
+USE_HTTPS="false"
 # 必填：用浏览器访问网站时地址栏里的主机名（IP 或域名），多个用英文逗号分隔，不要写 http://
 SERVER_ACTION_ALLOWED_ORIGINS="你的公网IP"
 ```
+
+> 通过 **HTTP + IP** 访问时保持 `USE_HTTPS="false"`。配置好 HTTPS 证书后改为 `USE_HTTPS="true"` 并重新 `npm run build`。
 
 5. 构建并启动：
 
@@ -147,7 +150,7 @@ pm2 save && pm2 startup
 7. 用 Certbot 申请 HTTPS 证书（Let's Encrypt）
 8. 将域名 A 记录解析到服务器公网 IP
 
-> 生产环境必须使用 HTTPS，否则登录 Cookie（`secure` 模式）无法正常工作。
+> 通过 IP + HTTP 访问时请设置 `USE_HTTPS="false"`。启用 HTTPS 后改为 `USE_HTTPS="true"`。
 
 ### 数据备份
 
