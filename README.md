@@ -157,13 +157,54 @@ cp prisma/prod.db /backup/prod-$(date +%Y%m%d).db
 
 ### 更新部署
 
+> **重要**：`npm run build` 必须在服务器上执行，且执行时项目目录下已有 `.env` 文件。`.env` 不要提交到 Git，更新代码不会覆盖服务器上的 `.env`。
+
+**方式一：一键脚本（推荐）**
+
+SSH 登录服务器后，进入项目目录执行：
+
 ```bash
+cd /var/www/zhaxia-tournament   # 改成你实际的项目路径
+bash scripts/update-server.sh
+```
+
+**方式二：手动逐步执行**
+
+```bash
+cd /var/www/zhaxia-tournament   # 改成你实际的项目路径
 git pull
 npm install
 npx prisma migrate deploy
 npm run build
 pm2 restart zaxia
 ```
+
+**如何 SSH 登录服务器（不熟悉 Linux 可参考）**
+
+1. Windows：打开「终端」或 PowerShell，输入：
+   ```bash
+   ssh root@你的服务器公网IP
+   ```
+   （若创建实例时用的是 `ubuntu` 用户，则把 `root` 换成 `ubuntu`）
+2. 首次连接会提示确认指纹，输入 `yes` 回车
+3. 输入购买/创建实例时设置的密码（输入时屏幕不显示字符，属正常）
+4. 看到命令行提示符后即可执行上面的更新命令
+
+**更新后验证**
+
+1. 浏览器访问网站（建议用 HTTPS 或 IP）
+2. 登录管理员账号
+3. 点击「游戏管理」「赛事管理」等子页面，应能正常进入，不再跳回登录页
+
+**若仍跳回登录页，请检查**
+
+| 检查项 | 命令 / 说明 |
+|--------|-------------|
+| `.env` 是否存在 | `ls -la .env` |
+| `SESSION_SECRET` 是否设置 | `grep SESSION_SECRET .env`（至少 32 位随机字符） |
+| 应用是否在运行 | `pm2 status`（`zaxia` 状态应为 `online`） |
+| 是否用了 HTTPS | 生产环境 `NODE_ENV=production` 时 Cookie 需要 HTTPS；仅用 HTTP 访问 IP 可能导致登录异常 |
+| 查看错误日志 | `pm2 logs zaxia --lines 50` |
 
 ## 常用命令
 
