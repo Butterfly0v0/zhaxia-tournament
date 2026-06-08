@@ -7,6 +7,7 @@ export async function searchPlayers(query: string) {
 
   return prisma.user.findMany({
     where: {
+      role: "PLAYER",
       isBanned: false,
       OR: [
         { nickname: { contains: q } },
@@ -35,10 +36,11 @@ export async function getPlayerForPublicLookup(userId: string) {
       startGgUniqueCode: true,
       isVirtual: true,
       isBanned: true,
+      role: true,
     },
   });
 
-  if (!user || user.isBanned) return null;
+  if (!user || user.isBanned || user.role !== "PLAYER") return null;
 
   const decrypted = decryptSensitiveUserFields(user);
   return {
